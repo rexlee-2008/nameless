@@ -1,10 +1,21 @@
 import random
+from itertools import combinations
+
+# 점수
+payoff_matrix = {
+    ("C", "C"): (3, 3),
+    ("C", "D"): (0, 5),
+    ("D", "C"): (5, 0),
+    ("D", "D"): (1, 1),
+}
 
 class Bot:
-    def __init__(self, strategy):
+    def __init__(self, name, strategy):
+        self.name = name
         self.strategy = strategy
         self.history = []
         self.opponent_history = []
+        self.score = 0
 
     def move(self):
         ## 항상 협력하는 전략
@@ -69,9 +80,70 @@ class Bot:
         else:
             raise ValueError(f"Unknown strategy: {self.strategy}")
 
+
+
     def update_history(self, my_move, opponent_move):
         self.history.append(my_move)
         self.opponent_history.append(opponent_move)
+
+    def reset(self):
+        self.history.clear()
+        self.opponent_history.clear()
+
+def play_round(bot1, bot2):
+    # move 값은 C,D
+    move1 = bot1.move()
+    move2 = bot2.move()
+    
+    bot1.update_history(move1, move2)
+    bot2.update_history(move2, move1)
+    score1, score2 = payoff_matrix[(move1, move2)]
+    bot1.score += score1
+    bot2.score += score2
+
+def simulate_match(bot1, bot2, rounds):
+    # 여러번을 싸우기 떄문에 다시 싸울떄 전의 기록을 리셋셋
+    bot1.reset()
+    bot2.reset()
+    for _ in range(rounds):
+        play_round(bot1, bot2)
+
+def tournament(bots, rounds):
+    for bot1, bot2 in combinations(bots, 2):
+        print(bot1.name, "VS", bot2.name)
+        simulate_match(bot1, bot2, rounds)
+
+# 전략 리스트
+strategies = [
+    "always_cooperate",
+    "always_defect",
+    "tit_for_tat",
+    "tit_for_two_tats",
+    "two_tits_for_tat",
+    "random",
+    "grim_trigger",
+    "pavlov",
+    "two_coop_two_defect",
+]
+
+# 봇 생성
+bots = [Bot(f"Bot{i+1}", strategy) for i, strategy in enumerate(strategies)]
+
+for bot in bots:
+    print(bot.name, bot.strategy)
+
+# 토너먼트 실행
+rounds = 20
+tournament(bots, rounds)
+
+# 결과 출력 (점수 순으로 정렬)
+bots_sorted = sorted(bots, key=lambda b: b.score, reverse=True)
+
+print("\n=== 최종 순위 ===")
+for rank, bot in enumerate(bots_sorted, 1):
+    print(f"{rank}. {bot.name} ({bot.strategy}) - {bot.score}점")
+
+'''
 
 def play_round(bot1, bot2):
     move1 = bot1.move()
@@ -94,7 +166,10 @@ results = simulate("tit_for_tat", "grim_trigger", rounds)
 
 for i, (move1, move2) in enumerate(results):
     print(f"Round {i+1}: Bot1 ({move1}) vs Bot2 ({move2})")
-    
+
+'''
+
+ 
 
 '''
 항상 협력하는 전략
