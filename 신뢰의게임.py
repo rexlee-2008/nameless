@@ -1,13 +1,24 @@
 import random
-from itertools import combinations
+#from itertools import combinations
 
 # 점수
-payoff_matrix = {
+# C는 협력, D는 배신
+scoreboard = {
     ("C", "C"): (3, 3),
     ("C", "D"): (0, 5),
     ("D", "C"): (5, 0),
-    ("D", "D"): (1, 1),
+    ("D", "D"): (0, 0),
 }
+
+# 전략별 봇
+strategy_list = [
+    "tit_for_tat",
+    "grim_trigger",
+    "always_defect",
+    "pavlov",
+    "random"
+]
+
 
 class Bot:
     def __init__(self, name, strategy):
@@ -91,94 +102,88 @@ class Bot:
         self.opponent_history.clear()
 
 def play_round(bot1, bot2):
-    # move 값은 C,D
     move1 = bot1.move()
     move2 = bot2.move()
     
     bot1.update_history(move1, move2)
     bot2.update_history(move2, move1)
-    score1, score2 = payoff_matrix[(move1, move2)]
+    score1, score2 = scoreboard[(move1, move2)]
     bot1.score += score1
     bot2.score += score2
 
 def simulate_match(bot1, bot2, rounds):
-    # 여러번을 싸우기 떄문에 다시 싸울떄 전의 기록을 리셋셋
+    # 봇들의 이전 기록과 점수 초기화
     bot1.reset()
     bot2.reset()
-    for _ in range(rounds):
-        play_round(bot1, bot2)
+    
+    print(f"\n {bot1.name} ({bot1.strategy}) VS {bot2.name} ({bot2.strategy})")
+    
+    for round_num in range(1, rounds + 1):
+        # 각 봇들의 행동
+        move1 = bot1.move()
+        move2 = bot2.move()
+        
+        # 각 봇들이 한 행동을 기록후 점수 업데이트
+        bot1.update_history(move1, move2)
+        bot2.update_history(move2, move1)
+        score1, score2 = scoreboard[(move1, move2)]
+        bot1.score += score1
+        bot2.score += score2
+        
+        print(f"Round {round_num:02}: {bot1.name} ({move1}) vs {bot2.name} ({move2}) "
+              f" 얻은 점수: {score1} - {score2}")
 
+    if bot1.score > bot2.score:
+        winner = bot1.name
+    elif bot2.score > bot1.score:
+        winner = bot2.name
+    else:
+        winner = "무승부"
+
+    print(f"결과: {bot1.name} {bot1.score}점, {bot2.name} {bot2.score}점  승자: {winner}")
+
+def tournament(strategy_list, rounds):
+    # 함수안이라서 밖의 변수와 일치 X
+    bots = []
+    idx = 1
+    
+    # 봇 생성
+    for strat in strategy_list:
+        bots.append(Bot(f"Bot{idx}", strat))
+        idx += 1
+
+    # 모든 봇끼리 한 번씩 대결
+    for i in range(len(bots)):
+        for j in range(i+1, len(bots)):
+            simulate_match(bots[i], bots[j], rounds)
+
+    # 결과 정렬해서 출력
+    bots_sorted = sorted(bots, key=lambda b: b.score, reverse=True)
+    print("\n=== 최종 순위 ===")
+    for rank, bot in enumerate(bots_sorted, 1):
+        print(f"{rank}. {bot.name} ({bot.strategy}) - {bot.score}점")
+
+
+
+'''
 def tournament(bots, rounds):
     for bot1, bot2 in combinations(bots, 2):
-        print(bot1.name, "VS", bot2.name)
         simulate_match(bot1, bot2, rounds)
-
-# 전략 리스트
-strategies = [
-    "always_cooperate",
-    "always_defect",
-    "tit_for_tat",
-    "tit_for_two_tats",
-    "two_tits_for_tat",
-    "random",
-    "grim_trigger",
-    "pavlov",
-    "two_coop_two_defect",
-]
+'''
 
 # 봇 생성
-bots = [Bot(f"Bot{i+1}", strategy) for i, strategy in enumerate(strategies)]
+bots = []
 
+# 봇 인덱스
+idx = 1
+for strategy in strategy_list:
+    bots.append(Bot(f"Bot{idx}", strategy))
+    idx += 1
+
+# 실행 확인
 for bot in bots:
-    print(bot.name, bot.strategy)
+    print(f"{bot.name} - {bot.strategy}")
 
 # 토너먼트 실행
-rounds = 20
-tournament(bots, rounds)
-
-# 결과 출력 (점수 순으로 정렬)
-bots_sorted = sorted(bots, key=lambda b: b.score, reverse=True)
-
-print("\n=== 최종 순위 ===")
-for rank, bot in enumerate(bots_sorted, 1):
-    print(f"{rank}. {bot.name} ({bot.strategy}) - {bot.score}점")
-
-'''
-
-def play_round(bot1, bot2):
-    move1 = bot1.move()
-    move2 = bot2.move()
-    bot1.update_history(move1, move2)
-    bot2.update_history(move2, move1)
-    return move1, move2
-
-def simulate(bot1_strategy, bot2_strategy, rounds):
-    bot1 = Bot(bot1_strategy)
-    bot2 = Bot(bot2_strategy)
-    results = []
-    for _ in range(rounds):
-        results.append(play_round(bot1, bot2))
-    return results
-
-
-rounds = 20  # 원하는 횟수 입력
-results = simulate("tit_for_tat", "grim_trigger", rounds)
-
-for i, (move1, move2) in enumerate(results):
-    print(f"Round {i+1}: Bot1 ({move1}) vs Bot2 ({move2})")
-
-'''
-
- 
-
-'''
-항상 협력하는 전략
-항상 배신하는 전략
-처음엔 협력하고, 이후에는 상대방의 이전 행동을 따라함
-상대방이 두 번 연속 배신해야 배신함
-상대방이 한 번이라도 배신하면 두 번 연속 배신함
-랜덤하게 협력 또는 배신
-상대방이 한 번이라도 배신하면 이후에는 계속 배신
-이전 라운드에서 같은 선택(협력-협력 or 배신-배신)이었다면 협력, 아니면 배신
-2번 협력하고 2번 배신하는 패턴 반복
-'''
+rounds = 10
+tournament(strategy_list, rounds)
